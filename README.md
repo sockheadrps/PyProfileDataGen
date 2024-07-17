@@ -108,11 +108,10 @@ python Generator\utils\graphing\lines_graph.py
 ```
 python Generator\utils\graphing\top_libraries_graph.py
 ```
-
+then run
 ```
 python Generator\utils\gifmaker.py
 ```
-
 and finally run
 ```
 python Generator\readme.py
