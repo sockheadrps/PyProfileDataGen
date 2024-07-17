@@ -1,5 +1,7 @@
-# Add some data and visulaizations to your github profile via github actions!
-## This tool appends some data and data visulizations to your github profile automatically on push via github actions.
+# Add some data and visualizations to your github profile via github actions!
+
+## This tool appends some data and data visualizations to your github profile automatically on push via github actions.
+
 ### It appends and updates to your profile at the bottom, so you can keep all your other information the same without worrying about it.
 ![](assets/profilegif.gif)
 ## Instructions
