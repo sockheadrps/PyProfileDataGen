@@ -1,0 +1,65 @@
+name: Run Python Scripts For Data Gathering and Generation
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Ensure DataVisuals directory exists
+        run: mkdir -p DataVisuals
+
+      - name: Run data_scrape.py
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: python Generator/utils/data_scrape.py
+
+      - name: Gather Merged PRs
+        run: python Generator/utils/mergedprs.py
+
+      - name: Generate Graphs
+        run: |
+          python Generator/utils/graphing/construct_counts_graph.py
+          python Generator/utils/graphing/line_prs_graph.py
+          python Generator/utils/graphing/lines_graph.py
+          python Generator/utils/graphing/top_libraries_graph.py
+
+      - name: Generate data gif
+        run: |
+          python Generator/utils/gifmaker.py
+
+      - name: Adjust Readme
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+        run: python Generator/readme.py
+
+      - name: Commit files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git diff-index --quiet HEAD || git commit -m "Updated Python data" --allow-empty
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.TOKEN }}
+          branch: main
