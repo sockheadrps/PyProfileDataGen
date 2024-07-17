@@ -49,7 +49,7 @@ TOKEN=YOUR_API_TOKEN
 ### Clone or save
 ![](assets/clonesave.png)
 
-### Open the folder you just saved this repo to, as well as the folder containing your profile repo. Move the highlited files
+### Open the folder you just saved this repo to, as well as the folder containing your profile repo. Move the highlighted files
 ![](assets/movefiles.png)
 
 ### open your profile README.md and add
@@ -83,18 +83,6 @@ python Generator\utils\data_scrape.py
 This may take a few minutes depending on how many repos youve uploaded
 ![](assets/datascrape.png)
 
-### Open the folder you just saved this repo to, as well as the folder containing your profile repo. Move the highlited files
-![](assets/movefiles.png)
-
-### open your profile README.md and add
-
-```
----
-```
- to the end of the file. 
- 
- Make sure --- doesnt appear anywhere else in your markdown. This is how the python script identifies the end of your readme.md to append / update data
-![](assets/readmeadd.png)
 
 ### Run the following commands. 
 
@@ -129,6 +117,8 @@ python Generator\readme.py
 ```
 ![](assets/runlocal.png)
 
+### Now look at the data appended in your README.md
+
 </details>
 
 <details>
@@ -153,7 +143,7 @@ This will always take a few minutes if you have a lot of repos. I have about 40 
 
 ![](assets/actionfinished.png)
 
-### Once this build finished your repo will be updated and ready!
+### Once this build finished your Profile will be updated and ready!
 
 
 
