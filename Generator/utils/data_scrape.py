@@ -3,15 +3,19 @@ from dotenv import load_dotenv
 import os
 import json
 import re
+import configparser
+
 
 load_dotenv()
 
 ACCESS_TOKEN = os.getenv("TOKEN")
-
+config = configparser.ConfigParser()
+config.read("config.ini")
+USER = config.get("Settings", "github_user_name")
 
 g = Github(ACCESS_TOKEN)
 
-user = g.get_user()
+user = g.get_user(USER)
 
 
 def count_lines(content):
