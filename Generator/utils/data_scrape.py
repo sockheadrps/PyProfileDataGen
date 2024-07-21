@@ -12,8 +12,10 @@ ACCESS_TOKEN = os.getenv("TOKEN")
 g = Github(ACCESS_TOKEN)
 user = g.get_user()
 
+
 def count_lines(content):
     return len(content.splitlines())
+
 
 def count_python_constructs(content):
     counts = {
@@ -50,16 +52,15 @@ def count_python_constructs(content):
 
     return libraries, counts
 
-# Initialize repo_data JSON structure
-repo_data = {"repo_stats": [], "commit_counts": []}
 
-# Initialize a dictionary to store commit messages and a list for commit times
+repo_data = {"repo_stats": [], "commit_counts": [], "construct_counts": []}
+
 commit_messages = defaultdict(list)
 commit_times = []
 
-# Fetch commit messages and commit times for each repository
 for repo in user.get_repos():
     if not repo.fork:
+            break
         print(f"Processing {repo.name}...")
         commits = repo.get_commits()
         for commit in commits:
@@ -74,14 +75,12 @@ for repo in user.get_repos():
             "total_python_lines": 0,
             "file_extensions": {},
             "total_commits": 0,
-            "commit_messages": commit_messages[repo.name],
-            "construct_counts": {}
+            "commit_messages": commit_messages[repo.name],  # Add commit messages
+            "construct_counts": {},  # Add construct counts
         }
 
         contents = repo.get_contents("")
         while contents:
-            commits = repo.get_commits()
-            repo_info["total_commits"] = commits.totalCount
             file_content = contents.pop(0)
             if file_content.type == "dir":
                 contents.extend(repo.get_contents(file_content.path))
@@ -101,8 +100,7 @@ for repo in user.get_repos():
                             repo_info["total_python_lines"] += count_lines(file_content_data)
                             libs, construct_counts = count_python_constructs(file_content_data)
                             repo_info["libraries"].update(libs)
-                            repo_info["construct_counts"] = construct_counts  # Update construct counts
-
+                            repo_info["construct_counts"] = construct_counts  # Add construct counts to repo_info
                         except UnicodeDecodeError:
                             print(f"Skipping non-UTF-8 file: {file_content.path}")
                     else:
