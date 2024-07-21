@@ -2,7 +2,7 @@ import json
 import plotly.graph_objects as go
 import pandas as pd
 import configparser
-
+from collections import defaultdict
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -13,9 +13,16 @@ GENERATE = config.getboolean("Settings", "generate_construct_bar_chart")
 with open("repo_data.json", "r") as json_file:
     repo_data = json.load(json_file)
 
-# Get construct counts
-construct_count = repo_data["construct_count"]
-df = pd.DataFrame(list(construct_count.items()), columns=["Construct", "Count"])
+# Aggregate construct counts across all repositories
+aggregate_construct_count = defaultdict(int)
+
+for repo in repo_data["repo_stats"]:
+    construct_counts = repo.get("construct_counts", {})
+    for construct, count in construct_counts.items():
+        aggregate_construct_count[construct] += count
+
+# Convert aggregate_construct_count to a DataFrame
+df = pd.DataFrame(list(aggregate_construct_count.items()), columns=["Construct", "Count"])
 
 # Get top 15 constructs
 df = df.sort_values(by="Count", ascending=False).head(15)
