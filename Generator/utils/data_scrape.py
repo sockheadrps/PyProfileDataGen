@@ -12,10 +12,8 @@ ACCESS_TOKEN = os.getenv("TOKEN")
 g = Github(ACCESS_TOKEN)
 user = g.get_user()
 
-
 def count_lines(content):
     return len(content.splitlines())
-
 
 def count_python_constructs(content):
     counts = {
@@ -52,7 +50,6 @@ def count_python_constructs(content):
 
     return libraries, counts
 
-
 repo_data = {"repo_stats": [], "commit_counts": [], "construct_counts": []}
 
 commit_messages = defaultdict(list)
@@ -60,7 +57,6 @@ commit_times = []
 
 for repo in user.get_repos():
     if not repo.fork:
-            break
         print(f"Processing {repo.name}...")
         commits = repo.get_commits()
         for commit in commits:

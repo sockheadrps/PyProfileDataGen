@@ -110,6 +110,12 @@ python Generator\utils\graphing\lines_graph.py
 ```
 python Generator\utils\graphing\top_libraries_graph.py
 ```
+```
+python Generator/utils/graphing/word_cloud.py
+```
+```
+Generator/utils/graphing/commit_heatmap.py
+```
 then run
 ```
 python Generator\utils\gifmaker.py

@@ -23,7 +23,7 @@ def blend_images(img1, img2, alpha):
 
 def add_timer(image, time_left):
     draw = ImageDraw.Draw(image)
-    font = ImageFont.load_default()
+    font = ImageFont.load_default(size=40)
     position = (common_size[0] - 60, 10)
     text = f"{time_left}s"
     draw.text(position, text, font=font, fill="white")
