@@ -2,7 +2,7 @@ import json
 import pandas as pd
 import plotly.express as px
 
-with open("commit_data.json", "r") as file:
+with open("repo_data.json", "r") as file:
     commit_counts = pd.DataFrame(json.load(file))
 
 
