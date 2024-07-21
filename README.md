@@ -151,7 +151,7 @@ git push
 
 ![](assets/workflow.png)
 
-This will always take a few minutes if you have a lot of repos. I have about 40 and it takes between 5-10 minutes to run on github.
+This will always take a few minutes if you have a lot of repos.
 
 ![](assets/actionfinished.png)
 
