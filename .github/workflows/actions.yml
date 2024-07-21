@@ -41,6 +41,8 @@ jobs:
           python Generator/utils/graphing/line_prs_graph.py
           python Generator/utils/graphing/lines_graph.py
           python Generator/utils/graphing/top_libraries_graph.py
+          python Generator/utils/graphing/commit_heatmap.py
+          python Generator/utils/graphing/word_cloud.py
 
       - name: Generate data gif
         run: |

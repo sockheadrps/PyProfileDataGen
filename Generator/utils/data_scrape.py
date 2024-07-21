@@ -3,42 +3,34 @@ from dotenv import load_dotenv
 import os
 import json
 import re
-import configparser
-
+from collections import defaultdict
+import pandas as pd
 
 load_dotenv()
 
 ACCESS_TOKEN = os.getenv("TOKEN")
-config = configparser.ConfigParser()
-config.read("config.ini")
-USER = config.get("Settings", "github_user_name")
-
 g = Github(ACCESS_TOKEN)
-
-user = g.get_user(USER)
+user = g.get_user()
 
 
 def count_lines(content):
     return len(content.splitlines())
 
 
-counts = {
-    "if statements": 0,
-    "while loops": 0,
-    "for loops": 0,
-    "functions created": 0,
-    "async functions created": 0,
-    "classes created": 0,
-}
-
-
-# Function to find Python libraries in a file content
 def count_python_constructs(content):
-    global counts
+    counts = {
+        "if statements": 0,
+        "while loops": 0,
+        "for loops": 0,
+        "functions created": 0,
+        "async functions created": 0,
+        "classes created": 0,
+    }
     check_imports = True
     importless_streak = 0
     libraries = set()
     import_patterns = [r"^import\s+(\w+)", r"^from\s+(\w+)\s+import"]
+
     for line in content.splitlines():
         if check_imports:
             for pattern in import_patterns:
@@ -48,7 +40,6 @@ def count_python_constructs(content):
                     importless_streak = 0
                 else:
                     importless_streak += 1
-            # Break if there are more than 10 lines without imports in a row
             if importless_streak > 10:
                 check_imports = False
 
@@ -63,12 +54,22 @@ def count_python_constructs(content):
 
 
 # Initialize repo_data JSON structure
-repo_data = {"repo_stats": []}
+repo_data = {"repo_stats": [], "commit_counts": []}
 
+# Initialize a dictionary to store commit messages and a list for commit times
+commit_messages = defaultdict(list)
+commit_times = []
+
+# Fetch commit messages and commit times for each repository
 for repo in user.get_repos():
-    # Only process repositories that are not forks
     if not repo.fork:
         print(f"Processing {repo.name}...")
+        commits = repo.get_commits()
+        for commit in commits:
+            commit_date = commit.commit.author.date
+            commit_times.append([commit_date.weekday(), commit_date.hour])
+            commit_messages[repo.name].append(commit.commit.message)
+
         repo_info = {
             "repo_name": repo.name,
             "python_files": [],
@@ -76,10 +77,10 @@ for repo in user.get_repos():
             "total_python_lines": 0,
             "file_extensions": {},
             "total_commits": 0,
+            "commit_messages": commit_messages[repo.name],  # Add commit messages
         }
 
         contents = repo.get_contents("")
-
         while contents:
             commits = repo.get_commits()
             repo_info["total_commits"] = commits.totalCount
@@ -89,15 +90,12 @@ for repo in user.get_repos():
             else:
                 file_extension = os.path.splitext(file_content.path)[1]
 
-                # Update file extension count
                 if file_extension in repo_info["file_extensions"]:
                     repo_info["file_extensions"][file_extension] += 1
                 else:
                     repo_info["file_extensions"][file_extension] = 1
 
-                # Only process .py files
                 if file_extension == ".py":
-                    # Check the encoding and decode if it's base64
                     if file_content.encoding == "base64":
                         try:
                             file_content_data = file_content.decoded_content.decode("utf-8")
@@ -106,19 +104,26 @@ for repo in user.get_repos():
                             libs, construct_counts = count_python_constructs(file_content_data)
                             repo_info["libraries"].update(libs)
 
-                        # Skip files that are not UTF-8 encoded, images, etc
                         except UnicodeDecodeError:
                             print(f"Skipping non-UTF-8 file: {file_content.path}")
                     else:
                         print(f"Skipping file with unsupported encoding: {file_content.path}")
 
-        # Convert libraries set to list for JSON serialization
         repo_info["libraries"] = list(repo_info["libraries"])
-
-        # Append repo_info to repo_stats
         repo_data["repo_stats"].append(repo_info)
 
-        repo_data["construct_count"] = counts
+# Convert commit_times to a DataFrame
+commit_df = pd.DataFrame(commit_times, columns=["DayOfWeek", "HourOfDay"])
+
+# Map weekdays to labels
+weekday_map = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"}
+commit_df["DayOfWeek"] = commit_df["DayOfWeek"].map(weekday_map)
+
+# Count the number of commits for each hour of the day and day of the week
+commit_counts = commit_df.groupby(["DayOfWeek", "HourOfDay"]).size().reset_index(name="Count")
+
+# Add commit counts to repo_data
+repo_data["commit_counts"] = commit_counts.to_dict(orient="records")
 
 # Save the data as JSON
 with open("repo_data.json", "w") as json_file:
