@@ -8,8 +8,10 @@ with open("repo_data.json", "r") as file:
 
 commit_counts = pd.DataFrame(data["commit_counts"])
 
+
 def hour_to_am_pm(hour):
     return f"{hour % 12 or 12} {'AM' if hour < 12 else 'PM'}"
+
 
 commit_counts["HourOfDay"] = commit_counts["HourOfDay"].apply(hour_to_am_pm)
 
@@ -29,25 +31,20 @@ fig = px.imshow(
     aspect="auto",
     color_continuous_scale="Plasma",
     zmin=0,
-    zmax=heatmap_data.max().max()
+    zmax=heatmap_data.max().max(),
 )
 
 fig.update_layout(
     title="Heatmap of Commit Frequency by Hour of Day and Day of Week",
+    font=dict(family="Arial, sans-serif", size=14, color="rgb(255, 255, 255)"),
     xaxis_nticks=24,
     yaxis_nticks=7,
     margin=dict(l=0, r=0, t=30, b=0),
     plot_bgcolor="#22272E",
     paper_bgcolor="#22272E",
-    xaxis=dict(
-        tickfont=dict(color='white')
-    ),
-    yaxis=dict(
-        tickfont=dict(color='white')
-    ),
-    coloraxis_colorbar=dict(
-        tickfont=dict(color='white')
-    )
+    xaxis=dict(tickfont=dict(color="white")),
+    yaxis=dict(tickfont=dict(color="white")),
+    coloraxis_colorbar=dict(tickfont=dict(color="white")),
 )
 
 os.makedirs("DataVisuals", exist_ok=True)

@@ -18,8 +18,10 @@ frame_order = eval(frame_order)
 image_paths = {os.path.basename(f): os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(".png")}
 ordered_image_paths = [image_paths[f] for f in frame_order if f in image_paths]
 
+
 def blend_images(img1, img2, alpha):
     return Image.blend(img1, img2, alpha)
+
 
 def add_timer(image, time_left):
     draw = ImageDraw.Draw(image)
@@ -28,6 +30,7 @@ def add_timer(image, time_left):
     text = f"{time_left}s"
     draw.text(position, text, font=font, fill="white")
     return image
+
 
 common_size = (1200, 800)
 duration_per_frame = GIF_FRAME_DURATION

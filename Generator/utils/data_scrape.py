@@ -5,15 +5,26 @@ import json
 import re
 from collections import defaultdict
 import pandas as pd
+import configparser
 
 load_dotenv()
+
+# Load configuration
+config = configparser.ConfigParser()
+config.read("config.ini")
+
+# Debug settings
+DEBUG = config.getboolean("Debug", "debug")
+STEP_COUNT = config.getint("Debug", "step_count")
 
 ACCESS_TOKEN = os.getenv("TOKEN")
 g = Github(ACCESS_TOKEN)
 user = g.get_user()
 
+
 def count_lines(content):
     return len(content.splitlines())
+
 
 def count_python_constructs(content):
     counts = {
@@ -50,19 +61,28 @@ def count_python_constructs(content):
 
     return libraries, counts
 
+
 repo_data = {"repo_stats": [], "commit_counts": [], "construct_counts": []}
 
 commit_messages = defaultdict(list)
 commit_times = []
 
-for repo in user.get_repos():
+# Limit the number of repositories processed based on SCRAP_COUNT
+repo_iter = iter(user.get_repos())
+for i, repo in enumerate(repo_iter):
     if not repo.fork:
+        if DEBUG:
+            if i >= STEP_COUNT:
+                break
+
         print(f"Processing {repo.name}...")
         commits = repo.get_commits()
+        total_commits = 0
         for commit in commits:
             commit_date = commit.commit.author.date
             commit_times.append([commit_date.weekday(), commit_date.hour])
             commit_messages[repo.name].append(commit.commit.message)
+            total_commits += 1
 
         repo_info = {
             "repo_name": repo.name,
@@ -70,9 +90,9 @@ for repo in user.get_repos():
             "libraries": set(),
             "total_python_lines": 0,
             "file_extensions": {},
-            "total_commits": 0,
-            "commit_messages": commit_messages[repo.name],  # Add commit messages
-            "construct_counts": {},  # Add construct counts
+            "total_commits": total_commits,
+            "commit_messages": commit_messages[repo.name],
+            "construct_counts": {},
         }
 
         contents = repo.get_contents("")
@@ -96,7 +116,7 @@ for repo in user.get_repos():
                             repo_info["total_python_lines"] += count_lines(file_content_data)
                             libs, construct_counts = count_python_constructs(file_content_data)
                             repo_info["libraries"].update(libs)
-                            repo_info["construct_counts"] = construct_counts  # Add construct counts to repo_info
+                            repo_info["construct_counts"] = construct_counts
                         except UnicodeDecodeError:
                             print(f"Skipping non-UTF-8 file: {file_content.path}")
                     else:
@@ -105,19 +125,17 @@ for repo in user.get_repos():
         repo_info["libraries"] = list(repo_info["libraries"])
         repo_data["repo_stats"].append(repo_info)
 
-# Convert commit_times to a DataFrame
 commit_df = pd.DataFrame(commit_times, columns=["DayOfWeek", "HourOfDay"])
 
-# Map weekdays to labels
 weekday_map = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"}
 commit_df["DayOfWeek"] = commit_df["DayOfWeek"].map(weekday_map)
 
-# Count the number of commits for each hour of the day and day of the week
 commit_counts = commit_df.groupby(["DayOfWeek", "HourOfDay"]).size().reset_index(name="Count")
 
-# Add commit counts to repo_data
 repo_data["commit_counts"] = commit_counts.to_dict(orient="records")
 
-# Save the data as JSON
+if DEBUG:
+    print(f"Commit counts:\n{commit_counts}")
+
 with open("repo_data.json", "w") as json_file:
     json.dump(repo_data, json_file, indent=4)

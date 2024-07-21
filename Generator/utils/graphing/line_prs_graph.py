@@ -3,7 +3,6 @@ import plotly.express as px
 import pandas as pd
 import configparser
 
-
 config = configparser.ConfigParser()
 config.read("config.ini")
 
@@ -12,10 +11,8 @@ GENERATE = config.getboolean("Settings", "generate_lines_of_code_pr_scatter_char
 with open("repo_data.json", "r") as json_file:
     repo_data = json.load(json_file)
 
-# Sort repositories by lines of code
 sorted_repos = sorted(repo_data["repo_stats"], key=lambda x: x["total_python_lines"], reverse=True)
 
-# Get top 7 repositories
 top_repos = sorted_repos[:7]
 repo_names = [repo["repo_name"] for repo in top_repos]
 lines_of_code = [repo["total_python_lines"] for repo in top_repos]
@@ -48,23 +45,20 @@ fig.update_layout(
     font=dict(family="Arial, sans-serif", size=14, color="rgb(255, 255, 255)"),
     xaxis=dict(
         showgrid=False,
-        showticklabels=False,
+        showticklabels=True,
     ),
     yaxis=dict(
         showgrid=False,
-        showticklabels=False,
+        showticklabels=True,
         zeroline=False,
-        visible=False,
+        visible=True,
         showline=False,
         range=[0, df["Lines of Python Code"].max() + 100],
     ),
-    yaxis_title=None,
-    xaxis_title=None,
     plot_bgcolor="#22272E",
     paper_bgcolor="#22272E",
     margin=dict(l=40, r=40, t=60, b=0),
 )
-
 
 if GENERATE:
     fig.write_image("DataVisuals/top_lines_prs.png", width=1200, height=800)

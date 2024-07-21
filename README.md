@@ -87,8 +87,11 @@ python Generator\utils\data_scrape.py
 This may take a few minutes depending on how many repos youve uploaded
 ![](assets/datascrape.png)
 
-
-### Run the following commands. 
+### Run the bat file 
+```
+local_run.bat
+```
+### Or manually Run the following commands. 
 
 mergedprs.py must be run first
 ```
