@@ -12,10 +12,8 @@ ACCESS_TOKEN = os.getenv("TOKEN")
 g = Github(ACCESS_TOKEN)
 user = g.get_user()
 
-
 def count_lines(content):
     return len(content.splitlines())
-
 
 def count_python_constructs(content):
     counts = {
@@ -52,7 +50,6 @@ def count_python_constructs(content):
 
     return libraries, counts
 
-
 # Initialize repo_data JSON structure
 repo_data = {"repo_stats": [], "commit_counts": []}
 
@@ -77,7 +74,8 @@ for repo in user.get_repos():
             "total_python_lines": 0,
             "file_extensions": {},
             "total_commits": 0,
-            "commit_messages": commit_messages[repo.name],  # Add commit messages
+            "commit_messages": commit_messages[repo.name],
+            "construct_counts": {}
         }
 
         contents = repo.get_contents("")
@@ -103,6 +101,7 @@ for repo in user.get_repos():
                             repo_info["total_python_lines"] += count_lines(file_content_data)
                             libs, construct_counts = count_python_constructs(file_content_data)
                             repo_info["libraries"].update(libs)
+                            repo_info["construct_counts"] = construct_counts  # Update construct counts
 
                         except UnicodeDecodeError:
                             print(f"Skipping non-UTF-8 file: {file_content.path}")
