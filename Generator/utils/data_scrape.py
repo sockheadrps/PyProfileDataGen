@@ -74,6 +74,15 @@ for i, repo in enumerate(repo_iter):
         if DEBUG:
             if i >= STEP_COUNT:
                 break
+        
+        # Skip profile repo
+        if not config.getboolean("Settings", "include_profile_repo"):
+            if repo.name == user.login:
+                continue
+        
+        # Skip ignored repos
+        if repo.name in config.get("Settings", "ignored_repos"):
+            continue
 
         print(f"Processing {repo.name}...")
         commits = repo.get_commits()
