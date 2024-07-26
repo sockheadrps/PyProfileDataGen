@@ -38,12 +38,15 @@ def load_repo_data():
 def calculate_library_metrics(repo_data, excluded_libraries):
     library_counts = Counter()
     libraries_used = set()
+    total_python_files = 0
 
     for repo in repo_data["repo_stats"]:
         for library in repo["libraries"]:
             if library not in excluded_libraries:
                 library_counts[library] += 1
                 libraries_used.update(repo["libraries"])
+        
+        total_python_files += repo["total_python_files"]
 
     total_lines_of_code = sum(repo["total_python_lines"] for repo in repo_data["repo_stats"])
     total_libraries_used = len(libraries_used)
@@ -51,7 +54,7 @@ def calculate_library_metrics(repo_data, excluded_libraries):
     top_libraries = library_counts.most_common(15)
     libraries, counts = zip(*top_libraries)
 
-    return total_lines_of_code, total_libraries_used, top_libraries, libraries, counts
+    return total_lines_of_code, total_libraries_used, total_python_files, top_libraries, libraries, counts
 
 
 def format_pr_info(prs):
@@ -69,7 +72,7 @@ def format_pr_info(prs):
 def update_readme():
     excluded_libraries = load_environment()
     repo_data = load_repo_data()
-    total_lines_of_code, total_libraries_used, top_libraries, libraries, counts = calculate_library_metrics(
+    total_lines_of_code, total_libraries_used, total_python_files, top_libraries, libraries, counts = calculate_library_metrics(
         repo_data, excluded_libraries
     )
 
@@ -91,6 +94,8 @@ def update_readme():
     else:
         total_libraries_used = "\n\n"
 
+    total_python_files_section = f"### Total Python Files: {total_python_files}\n"
+
     new_metrics_section = [
         f"\n\n",
         f"### Data last generated on: {timestamp} via [GitHub Action {GITHUB_RUN_ID}](https://github.com/sockheadrps/sockheadrps/actions/runs/{GITHUB_RUN_ID})\n\n"
@@ -98,6 +103,7 @@ def update_readme():
         f"# 📊 Python Stats:\n\n",
         f"{total_lines_of_code}",
         f"{total_libraries_used}",
+        f"{total_python_files_section}",
         f"![](DataVisuals/data.gif)\n\n",
     ]
 

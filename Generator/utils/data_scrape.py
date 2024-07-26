@@ -97,6 +97,7 @@ for i, repo in enumerate(repo_iter):
             "repo_name": repo.name,
             "python_files": [],
             "libraries": set(),
+            "total_python_files": 0,
             "total_python_lines": 0,
             "file_extensions": {},
             "total_commits": total_commits,
@@ -118,6 +119,7 @@ for i, repo in enumerate(repo_iter):
                     repo_info["file_extensions"][file_extension] = 1
 
                 if file_extension == ".py":
+                    repo_info["total_python_files"] += 1
                     if file_content.encoding == "base64":
                         try:
                             file_content_data = file_content.decoded_content.decode("utf-8")
@@ -144,7 +146,7 @@ commit_counts = commit_df.groupby(["DayOfWeek", "HourOfDay"]).size().reset_index
 repo_data["commit_counts"] = commit_counts.to_dict(orient="records")
 
 if DEBUG:
-    print(f"Commit counts:\n{commit_counts}")
+    print(f"Debug")
 
 with open("repo_data.json", "w") as json_file:
     json.dump(repo_data, json_file, indent=4)
