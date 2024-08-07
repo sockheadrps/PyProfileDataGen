@@ -6,32 +6,28 @@ import re
 from collections import defaultdict
 import pandas as pd
 import configparser
+from datetime import datetime, timedelta, timezone
 
 load_dotenv()
 
-# Load configuration
 config = configparser.ConfigParser()
 config.read("config.ini")
-
-# Debug settings
 DEBUG = config.getboolean("Debug", "debug")
 STEP_COUNT = config.getint("Debug", "step_count")
-
 ACCESS_TOKEN = os.getenv("TOKEN")
+
 g = Github(ACCESS_TOKEN)
 user = g.get_user()
 
-
 def count_lines(content):
     return len(content.splitlines())
-
 
 def count_python_constructs(content):
     counts = {
         "if statements": 0,
         "while loops": 0,
         "for loops": 0,
-        "functions created": 0,
+        "regular functions created": 0,
         "async functions created": 0,
         "classes created": 0,
     }
@@ -39,6 +35,10 @@ def count_python_constructs(content):
     importless_streak = 0
     libraries = set()
     import_patterns = [r"^import\s+(\w+)", r"^from\s+(\w+)\s+import"]
+
+    # Patterns for functions
+    async_function_pattern = r"async\s+def\s+\w+\b"
+    function_pattern = r"\bdef\s+\w+\b"
 
     for line in content.splitlines():
         if check_imports:
@@ -55,22 +55,30 @@ def count_python_constructs(content):
         counts["if statements"] += len(re.findall(r"\bif\b", line))
         counts["while loops"] += len(re.findall(r"\bwhile\b", line))
         counts["for loops"] += len(re.findall(r"\bfor\b", line))
-        counts["functions created"] += len(re.findall(r"\bdef\b", line))
-        counts["async functions created"] += len(re.findall(r"\basync\s+def\b", line))
+
+        # Count async functions first
+        async_functions = len(re.findall(async_function_pattern, line))
+        counts["async functions created"] += async_functions
+
+        # Count all functions
+        all_functions = len(re.findall(function_pattern, line))
+        counts["regular functions created"] += all_functions - async_functions
+
         counts["classes created"] += len(re.findall(r"\bclass\b", line))
 
     return libraries, counts
 
+def is_recent_commit(commit_date):
+    return commit_date >= datetime.now(timezone.utc) - timedelta(days=90)
 
-repo_data = {"repo_stats": [], "commit_counts": [], "construct_counts": []}
+repo_data = {"repo_stats": [], "commit_counts": {}, "construct_counts": [], "recent_commits": []}
 
 commit_messages = defaultdict(list)
 commit_times = []
 
-# Limit the number of repositories processed based on SCRAP_COUNT
 repo_iter = iter(user.get_repos())
 for i, repo in enumerate(repo_iter):
-    if not repo.fork:
+    if not repo.fork and not repo.archived:
         if DEBUG:
             if i >= STEP_COUNT:
                 break
@@ -83,15 +91,37 @@ for i, repo in enumerate(repo_iter):
         # Skip ignored repos
         if repo.name in config.get("Settings", "ignored_repos"):
             continue
+        
+        # Skip repos that are not owned by the user
+        if repo.owner.login != user.login:
+            continue
 
         print(f"Processing {repo.name}...")
         commits = repo.get_commits()
         total_commits = 0
+        recent_commits = []
         for commit in commits:
             commit_date = commit.commit.author.date
             commit_times.append([commit_date.weekday(), commit_date.hour])
             commit_messages[repo.name].append(commit.commit.message)
             total_commits += 1
+
+            if is_recent_commit(commit_date):
+                commit_details = {
+                    "repo_name": repo.name,
+                    "repo_url": f"https://github.com/{user.login}/{repo.name}",
+                    "sha": commit.sha,
+                    "message": commit.commit.message,
+                    "author": commit.commit.author.name,
+                    "date": commit_date.isoformat()
+                }
+
+                commit_data = repo.get_commit(commit.sha)
+                commit_details["additions"] = commit_data.stats.additions
+                commit_details["deletions"] = commit_data.stats.deletions
+                commit_details["total_changes"] = commit_data.stats.total
+
+                recent_commits.append(commit_details)
 
         repo_info = {
             "repo_name": repo.name,
@@ -102,7 +132,14 @@ for i, repo in enumerate(repo_iter):
             "file_extensions": {},
             "total_commits": total_commits,
             "commit_messages": commit_messages[repo.name],
-            "construct_counts": {},
+            "construct_counts": {
+                "if statements": 0,
+                "while loops": 0,
+                "for loops": 0,
+                "regular functions created": 0,
+                "async functions created": 0,
+                "classes created": 0,
+            },
         }
 
         contents = repo.get_contents("")
@@ -111,7 +148,12 @@ for i, repo in enumerate(repo_iter):
             if file_content.type == "dir":
                 contents.extend(repo.get_contents(file_content.path))
             else:
-                file_extension = os.path.splitext(file_content.path)[1]
+                # Split on dot to handle special cases
+                split_path = file_content.path.rsplit('.', 1)
+                if len(split_path) > 1:
+                    file_extension = '.' + split_path[-1]
+                else:
+                    file_extension = file_content.path
 
                 if file_extension in repo_info["file_extensions"]:
                     repo_info["file_extensions"][file_extension] += 1
@@ -127,7 +169,10 @@ for i, repo in enumerate(repo_iter):
                             repo_info["total_python_lines"] += count_lines(file_content_data)
                             libs, construct_counts = count_python_constructs(file_content_data)
                             repo_info["libraries"].update(libs)
-                            repo_info["construct_counts"] = construct_counts
+                            
+                            for key in repo_info["construct_counts"]:
+                                repo_info["construct_counts"][key] += construct_counts[key]
+
                         except UnicodeDecodeError:
                             print(f"Skipping non-UTF-8 file: {file_content.path}")
                     else:
@@ -135,6 +180,7 @@ for i, repo in enumerate(repo_iter):
 
         repo_info["libraries"] = list(repo_info["libraries"])
         repo_data["repo_stats"].append(repo_info)
+        repo_data["recent_commits"].extend(recent_commits)
 
 commit_df = pd.DataFrame(commit_times, columns=["DayOfWeek", "HourOfDay"])
 
@@ -143,7 +189,16 @@ commit_df["DayOfWeek"] = commit_df["DayOfWeek"].map(weekday_map)
 
 commit_counts = commit_df.groupby(["DayOfWeek", "HourOfDay"]).size().reset_index(name="Count")
 
-repo_data["commit_counts"] = commit_counts.to_dict(orient="records")
+commit_counts_dict = {}
+for _, row in commit_counts.iterrows():
+    day = row["DayOfWeek"]
+    hour = row["HourOfDay"]
+    count = row["Count"]
+    if day not in commit_counts_dict:
+        commit_counts_dict[day] = {}
+    commit_counts_dict[day][hour] = count
+
+repo_data["commit_counts"] = commit_counts_dict
 
 if DEBUG:
     print(f"Debug")

@@ -7,24 +7,28 @@ from collections import defaultdict
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-GENERATE = config.getboolean("Settings", "generate_construct_bar_chart")
+GENERATE = config.getboolean("Settings", "generate_file_types_bar_chart")
+EXCLUDED_FILE_TYPES = config.get("ExcludedFileTypes", "excluded_file_types")
 
 # Load repo data from JSON
 with open("repo_data.json", "r") as json_file:
     repo_data = json.load(json_file)
 
-# Aggregate construct counts across all repositories
-aggregate_construct_count = defaultdict(int)
+# Aggregate file extensions counts across all repositories
+aggregate_file_extension_count = defaultdict(int)
 
 for repo in repo_data["repo_stats"]:
-    construct_counts = repo.get("construct_counts", {})
-    for construct, count in construct_counts.items():
-        aggregate_construct_count[construct] += count
+    file_extensions = repo.get("file_extensions", {})
+    if ".py" in file_extensions:
+        for extension, count in file_extensions.items():
+            if extension != ".py" and extension not in EXCLUDED_FILE_TYPES:
+                aggregate_file_extension_count[extension] += count
 
-# Convert aggregate_construct_count to a DataFrame
-df = pd.DataFrame(list(aggregate_construct_count.items()), columns=["Construct", "Count"])
 
-# Get top 15 constructs
+# Convert aggregate_file_extension_count to a DataFrame
+df = pd.DataFrame(list(aggregate_file_extension_count.items()), columns=["File Type", "Count"])
+
+# Sort by count and get top 15 file types
 df = df.sort_values(by="Count", ascending=False).head(15)
 
 # Define colors for bar chart
@@ -46,11 +50,11 @@ colors = [
     "#ff4757",
 ]
 
-# Create figure for construct counts
+# Create figure for file types counts
 fig = go.Figure(
     data=[
         go.Bar(
-            x=df["Construct"],
+            x=df["File Type"],
             y=df["Count"],
             text=df["Count"],
             textposition="auto",
@@ -61,7 +65,7 @@ fig = go.Figure(
 )
 
 fig.update_layout(
-    title="Python Construct Counts",
+    title="File Types Counts",
     yaxis_title="Count",
     xaxis_tickangle=-45,
     font=dict(family="Arial, sans-serif", size=14, color="rgb(255, 255, 255)"),
@@ -72,7 +76,7 @@ fig.update_layout(
 )
 
 if GENERATE:
-    fig.write_image("DataVisuals/construct_counts.png", width=1200, height=800)
-    print("Construct counts graph generated successfully.")
+    fig.write_image("DataVisuals/file_types_counts.png", width=1200, height=800)
+    print("File types counts graph generated successfully.")
 else:
-    print("Construct counts graph not generated.")
+    print("File types counts graph not generated.")

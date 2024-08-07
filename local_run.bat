@@ -24,6 +24,9 @@ python Generator\utils\graphing\word_cloud.py
 REM Run commit heatmap script
 python Generator\utils\graphing\commit_heatmap.py
 
+REM Run File Types graph script
+python Generator\utils\graphing\file_types_bar_graph.py
+
 REM Run GIF maker script
 python Generator\utils\gifmaker.py
 

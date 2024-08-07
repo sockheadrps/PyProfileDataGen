@@ -1,42 +1,52 @@
 import json
 import pandas as pd
 import plotly.express as px
-import os
+import configparser
 
+# Read configuration
+config = configparser.ConfigParser()
+config.read("config.ini")
+GENERATE = config.getboolean("Settings", "generate_commit_heatmap")
+
+# Read data from JSON file
 with open("repo_data.json", "r") as file:
     data = json.load(file)
 
-commit_counts = pd.DataFrame(data["commit_counts"])
+# Extract commit counts data
+commit_counts = data["commit_counts"]
 
+# Convert the nested dictionary to a DataFrame
+commit_counts_df = pd.DataFrame(commit_counts).fillna(0).astype(int).T
+commit_counts_df.index.name = "DayOfWeek"
+commit_counts_df.columns.name = "HourOfDay"
 
+# Convert hour column names to integer for sorting
+commit_counts_df.columns = commit_counts_df.columns.astype(int)
+
+# Function to convert hour to AM/PM format
 def hour_to_am_pm(hour):
     return f"{hour % 12 or 12} {'AM' if hour < 12 else 'PM'}"
 
-
-commit_counts["HourOfDay"] = commit_counts["HourOfDay"].apply(hour_to_am_pm)
-
-heatmap_data = commit_counts.pivot(index="DayOfWeek", columns="HourOfDay", values="Count").fillna(0)
-
+# Reindex the DataFrame to ensure the correct order
 ordered_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-heatmap_data = heatmap_data.reindex(ordered_days)
+hours_order = list(range(24))
 
-hours_order = [f"{hour % 12 or 12} {'AM' if hour < 12 else 'PM'}" for hour in range(24)]
-heatmap_data = heatmap_data.reindex(columns=hours_order)
+commit_counts_df = commit_counts_df.reindex(ordered_days).reindex(columns=hours_order)
+commit_counts_df.columns = commit_counts_df.columns.map(hour_to_am_pm)
 
+# Create heatmap
 fig = px.imshow(
-    heatmap_data,
+    commit_counts_df,
     labels=dict(x="Hour of Day", y="Day of Week", color="Commit Count"),
-    x=heatmap_data.columns,
-    y=heatmap_data.index,
+    x=commit_counts_df.columns,
+    y=commit_counts_df.index,
+    color_continuous_scale="plasma",  # Changed to plasma color scheme
     aspect="auto",
-    color_continuous_scale="Plasma",
-    zmin=0,
-    zmax=heatmap_data.max().max(),
 )
 
+# Update layout for better aesthetics
 fig.update_layout(
     title="Heatmap of Commit Frequency by Hour of Day and Day of Week",
-    font=dict(family="Arial, sans-serif", size=14, color="rgb(255, 255, 255)"),
     xaxis_nticks=24,
     yaxis_nticks=7,
     margin=dict(l=0, r=0, t=30, b=0),
@@ -47,6 +57,9 @@ fig.update_layout(
     coloraxis_colorbar=dict(tickfont=dict(color="white")),
 )
 
-os.makedirs("DataVisuals", exist_ok=True)
-fig.write_image("DataVisuals/commit_heatmap.png", width=1200, height=800)
-print("Commit heatmap generated successfully.")
+# Save the heatmap image if configured to generate
+if GENERATE:
+    fig.write_image("DataVisuals/commit_heatmap.png", width=1200, height=800)
+    print("Commit heatmap generated successfully.")
+else:
+    print("Commit heatmap not generated.")

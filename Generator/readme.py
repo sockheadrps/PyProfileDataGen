@@ -9,6 +9,7 @@ import configparser
 config = configparser.ConfigParser()
 config.read("config.ini")
 
+SHOW_RECENT_COMMITS = config.getboolean("Readme", "show_recent_commits")
 GENERATE_MERGED_PRS = config.getboolean("Readme", "generate_merged_prs")
 SHOW_TOTAL_LINES_OF_CODE = config.getboolean("Readme", "show_total_lines_of_code")
 SHOW_TOTAL_LIBS = config.getboolean("Readme", "show_total_libs_used")
@@ -57,6 +58,19 @@ def calculate_library_metrics(repo_data, excluded_libraries):
     return total_lines_of_code, total_libraries_used, total_python_files, top_libraries, libraries, counts
 
 
+def format_recent_commits(commits):
+    sorted_commits = sorted(commits, key=lambda x: datetime.fromisoformat(x["date"]), reverse=True)
+
+    formatted_commits = []
+    for commit in sorted_commits[:3]:
+        commit_info = (
+            f'- **{commit["repo_name"]} - [{commit["message"]}]({commit["repo_url"]}/commit/{commit["sha"]})**\n'
+            f'  - Additions: {commit["additions"]} - Deletions: {commit["deletions"]} - Total Changes: {commit["total_changes"]}\n'
+        )
+        formatted_commits.append(commit_info)
+    
+    return "\n".join(formatted_commits)
+
 def format_pr_info(prs):
     formatted_info = []
     for pr in prs:
@@ -78,9 +92,15 @@ def update_readme():
 
     readme_file = "README.md"
     timestamp = datetime.now().strftime("%Y-%m-%d")
+    
+
+    if SHOW_RECENT_COMMITS:
+        recent_commits_section = f"## 🚀 Recent Commits\n\n{format_recent_commits(repo_data['recent_commits'])}\n\n"
+    else:
+        recent_commits_section = ""
 
     if GENERATE_MERGED_PRS:
-        recent_prs_section = f"# 🔀 Recently Merged Pull Requests\n\n{format_pr_info(repo_data['merged_prs'][:3])}\n"
+        recent_prs_section = f"## 🔀 Recently Merged Pull Requests\n\n{format_pr_info(repo_data['merged_prs'][:3])}\n"
     else:
         recent_prs_section = ""
 
@@ -99,7 +119,8 @@ def update_readme():
     new_metrics_section = [
         f"\n\n",
         f"### Data last generated on: {timestamp} via [GitHub Action {GITHUB_RUN_ID}](https://github.com/sockheadrps/sockheadrps/actions/runs/{GITHUB_RUN_ID})\n\n"
-        f"  {recent_prs_section}",
+        f"{recent_commits_section}",
+        f"{recent_prs_section}",
         f"# 📊 Python Stats:\n\n",
         f"{total_lines_of_code}",
         f"{total_libraries_used}",
