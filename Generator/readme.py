@@ -11,7 +11,8 @@ config.read("config.ini")
 
 SHOW_RECENT_COMMITS = config.getboolean("Readme", "show_recent_commits")
 GENERATE_MERGED_PRS = config.getboolean("Readme", "generate_merged_prs")
-SHOW_TOTAL_LINES_OF_CODE = config.getboolean("Readme", "show_total_lines_of_code")
+SHOW_TOTAL_LINES_OF_CODE = config.getboolean(
+    "Readme", "show_total_lines_of_code")
 SHOW_TOTAL_LIBS = config.getboolean("Readme", "show_total_libs_used")
 
 
@@ -25,7 +26,8 @@ def load_environment():
 
     config = configparser.ConfigParser()
     config.read("config.ini")
-    excluded_libraries_str = config.get("ExcludedLibs", "excluded_libraries", fallback="")
+    excluded_libraries_str = config.get(
+        "ExcludedLibs", "excluded_libraries", fallback="")
     excluded_libraries = eval(excluded_libraries_str)
 
     return excluded_libraries
@@ -46,10 +48,11 @@ def calculate_library_metrics(repo_data, excluded_libraries):
             if library not in excluded_libraries:
                 library_counts[library] += 1
                 libraries_used.update(repo["libraries"])
-        
+
         total_python_files += repo["total_python_files"]
 
-    total_lines_of_code = sum(repo["total_python_lines"] for repo in repo_data["repo_stats"])
+    total_lines_of_code = sum(repo["total_python_lines"]
+                              for repo in repo_data["repo_stats"])
     total_libraries_used = len(libraries_used)
 
     top_libraries = library_counts.most_common(15)
@@ -59,17 +62,21 @@ def calculate_library_metrics(repo_data, excluded_libraries):
 
 
 def format_recent_commits(commits):
-    sorted_commits = sorted(commits, key=lambda x: datetime.fromisoformat(x["date"]), reverse=True)
+    sorted_commits = sorted(
+        commits, key=lambda x: datetime.fromisoformat(x["date"]), reverse=True)
 
     formatted_commits = []
     for commit in sorted_commits[:3]:
+        clean_message = commit["message"].replace(
+            "\n", " ").replace("\r", " ").strip()
         commit_info = (
-            f'- **{commit["repo_name"]} - [{commit["message"]}]({commit["repo_url"]}/commit/{commit["sha"]})**\n'
+            f'- **{commit["repo_name"]} - [{clean_message}]({commit["repo_url"]}/commit/{commit["sha"]})**\n'
             f'  - Additions: {commit["additions"]} - Deletions: {commit["deletions"]} - Total Changes: {commit["total_changes"]}\n'
         )
         formatted_commits.append(commit_info)
-    
+
     return "\n".join(formatted_commits)
+
 
 def format_pr_info(prs):
     formatted_info = []
@@ -92,7 +99,6 @@ def update_readme():
 
     readme_file = "README.md"
     timestamp = datetime.now().strftime("%Y-%m-%d")
-    
 
     if SHOW_RECENT_COMMITS:
         recent_commits_section = f"## 🚀 Recent Commits\n\n{format_recent_commits(repo_data['recent_commits'])}\n\n"
