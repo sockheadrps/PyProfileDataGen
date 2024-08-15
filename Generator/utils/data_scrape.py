@@ -7,20 +7,31 @@ from collections import defaultdict
 import pandas as pd
 import configparser
 from datetime import datetime, timedelta, timezone
+from pytz import timezone as tz
 
+
+# Load environment variables
 load_dotenv()
 
+# Read configuration
 config = configparser.ConfigParser()
 config.read("config.ini")
 DEBUG = config.getboolean("Debug", "debug")
 STEP_COUNT = config.getint("Debug", "step_count")
 ACCESS_TOKEN = os.getenv("TOKEN")
+USER = config.get("Settings", "github_user_name")
+TIMEZONE = config.get("Settings", "target_tz")
+target_tz = tz(TIMEZONE)
+print(USER)
 
+# Initialize GitHub API
 g = Github(ACCESS_TOKEN)
-user = g.get_user()
+user = g.get_user(USER)
+
 
 def count_lines(content):
     return len(content.splitlines())
+
 
 def count_python_constructs(content):
     counts = {
@@ -68,10 +79,14 @@ def count_python_constructs(content):
 
     return libraries, counts
 
+
 def is_recent_commit(commit_date):
     return commit_date >= datetime.now(timezone.utc) - timedelta(days=90)
 
-repo_data = {"repo_stats": [], "commit_counts": {}, "construct_counts": [], "recent_commits": []}
+
+# Initialize data structure
+repo_data = {"repo_stats": [], "commit_counts": {},
+             "construct_counts": [], "recent_commits": []}
 
 commit_messages = defaultdict(list)
 commit_times = []
@@ -82,16 +97,16 @@ for i, repo in enumerate(repo_iter):
         if DEBUG:
             if i >= STEP_COUNT:
                 break
-        
+
         # Skip profile repo
         if not config.getboolean("Settings", "include_profile_repo"):
             if repo.name == user.login:
                 continue
-        
+
         # Skip ignored repos
         if repo.name in config.get("Settings", "ignored_repos"):
             continue
-        
+
         # Skip repos that are not owned by the user
         if repo.owner.login != user.login:
             continue
@@ -164,31 +179,53 @@ for i, repo in enumerate(repo_iter):
                     repo_info["total_python_files"] += 1
                     if file_content.encoding == "base64":
                         try:
-                            file_content_data = file_content.decoded_content.decode("utf-8")
+                            file_content_data = file_content.decoded_content.decode(
+                                "utf-8")
                             repo_info["python_files"].append(file_content.path)
-                            repo_info["total_python_lines"] += count_lines(file_content_data)
-                            libs, construct_counts = count_python_constructs(file_content_data)
+                            repo_info["total_python_lines"] += count_lines(
+                                file_content_data)
+                            libs, construct_counts = count_python_constructs(
+                                file_content_data)
                             repo_info["libraries"].update(libs)
-                            
+
                             for key in repo_info["construct_counts"]:
                                 repo_info["construct_counts"][key] += construct_counts[key]
 
                         except UnicodeDecodeError:
-                            print(f"Skipping non-UTF-8 file: {file_content.path}")
+                            print(
+                                f"Skipping non-UTF-8 file: {file_content.path}")
                     else:
-                        print(f"Skipping file with unsupported encoding: {file_content.path}")
+                        print(
+                            f"Skipping file with unsupported encoding: {file_content.path}")
 
         repo_info["libraries"] = list(repo_info["libraries"])
         repo_data["repo_stats"].append(repo_info)
         repo_data["recent_commits"].extend(recent_commits)
 
+# Create DataFrame for commit times
 commit_df = pd.DataFrame(commit_times, columns=["DayOfWeek", "HourOfDay"])
 
-weekday_map = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"}
+# Verify that 'HourOfDay' and 'DayOfWeek' are correctly created
+print(commit_df.head())
+print(commit_df.columns)
+
+# Ensure 'HourOfDay' exists and has values
+if 'HourOfDay' not in commit_df.columns:
+    raise KeyError("The 'HourOfDay' column is missing from the DataFrame!")
+
+# Map weekdays to names
+weekday_map = {0: "Monday", 1: "Tuesday", 2: "Wednesday",
+               3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"}
 commit_df["DayOfWeek"] = commit_df["DayOfWeek"].map(weekday_map)
 
-commit_counts = commit_df.groupby(["DayOfWeek", "HourOfDay"]).size().reset_index(name="Count")
+# Group commit data by day and hour, and count the occurrences
+commit_counts = commit_df.groupby(
+    ["DayOfWeek", "HourOfDay"]).size().reset_index(name="Count")
 
+# Verify that the grouped DataFrame is correctly structured
+print(commit_counts.head())
+
+# Build the commit counts dictionary
 commit_counts_dict = {}
 for _, row in commit_counts.iterrows():
     day = row["DayOfWeek"]
@@ -198,10 +235,12 @@ for _, row in commit_counts.iterrows():
         commit_counts_dict[day] = {}
     commit_counts_dict[day][hour] = count
 
+# Assign the dictionary to repo_data
 repo_data["commit_counts"] = commit_counts_dict
 
 if DEBUG:
-    print(f"Debug")
+    print(f"Debug information: {repo_data}")
 
+# Write data to JSON file
 with open("repo_data.json", "w") as json_file:
     json.dump(repo_data, json_file, indent=4)
