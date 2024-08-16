@@ -4,49 +4,55 @@ import pandas as pd
 import configparser
 from collections import defaultdict
 
+# Load configuration settings from 'config.ini'
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-GENERATE = config.getboolean("Settings", "generate_construct_bar_chart")
+# Determine if the construct bar chart should be generated
+GENERATE: bool = config.getboolean("Settings", "generate_construct_bar_chart")
 
-# Load repo data from JSON
+# Load repository data from JSON file
 with open("repo_data.json", "r") as json_file:
-    repo_data = json.load(json_file)
+    repo_data: dict = json.load(json_file)
 
 # Aggregate construct counts across all repositories
-aggregate_construct_count = defaultdict(int)
+aggregate_construct_count: defaultdict[str, int] = defaultdict(int)
 
+# Iterate through each repository to count constructs
 for repo in repo_data["repo_stats"]:
-    construct_counts = repo.get("construct_counts", {})
+    construct_counts: dict[str, int] = repo.get("construct_counts", {})
     for construct, count in construct_counts.items():
         aggregate_construct_count[construct] += count
 
-# Convert aggregate_construct_count to a DataFrame
-df = pd.DataFrame(list(aggregate_construct_count.items()), columns=["Construct", "Count"])
+# Convert the aggregate construct counts to a DataFrame
+df: pd.DataFrame = pd.DataFrame(
+    list(aggregate_construct_count.items()), columns=["Construct", "Count"]
+)
 
-# Get top 15 constructs
+# Sort the DataFrame by count and select the top 15 constructs
 df = df.sort_values(by="Count", ascending=False).head(15)
 
-# Define colors for bar chart
-colors = [
-    "#ff6f61",
-    "#a4e4b1",
-    "#ffb347",
-    "#4ecdc4",
-    "#d1ccc0",
-    "#ff6b6b",
-    "#6ab04c",
-    "#d6a2e8",
-    "#ff9ff3",
-    "#7bed9f",
-    "#feca57",
-    "#1abc9c",
-    "#ff6348",
-    "#686de0",
-    "#ff4757",
+# Define colors for the bar chart
+# Color names are provided alongside hexadecimal codes
+colors: list[str, ...] = [
+    "#ff6f61",  # Coral
+    "#a4e4b1",  # Light Green
+    "#ffb347",  # Light Orange
+    "#4ecdc4",  # Turquoise
+    "#d1ccc0",  # Light Beige
+    "#ff6b6b",  # Light Red
+    "#6ab04c",  # Green
+    "#d6a2e8",  # Light Purple
+    "#ff9ff3",  # Light Pink
+    "#7bed9f",  # Light Mint
+    "#feca57",  # Light Yellow
+    "#1abc9c",  # Teal
+    "#ff6348",  # Tomato Red
+    "#686de0",  # Medium Blue
+    "#ff4757",  # Red
 ]
 
-# Create figure for construct counts
+# Create a bar chart figure to visualize construct counts
 fig = go.Figure(
     data=[
         go.Bar(
@@ -54,23 +60,32 @@ fig = go.Figure(
             y=df["Count"],
             text=df["Count"],
             textposition="auto",
-            marker_color=colors[: len(df)],
+            marker_color=colors[: len(df)],  # Assign colors to bars
             textfont=dict(size=14, weight="bold"),
         )
     ]
 )
 
+# Update layout settings for the bar chart
 fig.update_layout(
     title="Python Construct Counts",
     yaxis_title="Count",
-    xaxis_tickangle=-45,
-    font=dict(family="Arial, sans-serif", size=14, color="rgb(255, 255, 255)"),
-    plot_bgcolor="#22272E",
-    paper_bgcolor="#22272E",
+    xaxis_tickangle=-45,  # Rotate x-axis labels for better readability
+    font=dict(
+        family="Arial, sans-serif", size=14, color="rgb(255, 255, 255)"
+    ),  # Font settings
+    plot_bgcolor="#22272E",  # Dark Gray Background
+    paper_bgcolor="#22272E",  # Dark Gray Paper Background
     margin=dict(l=40, r=40, t=60, b=100),
-    yaxis=dict(showticklabels=False, ticks="", showgrid=False, zeroline=False),
+    yaxis=dict(
+        showticklabels=False,  # Hide y-axis tick labels
+        ticks="",  # Hide ticks on y-axis
+        showgrid=False,  # Hide gridlines on y-axis
+        zeroline=False,  # Hide zero line on y-axis
+    ),
 )
 
+# Check if the chart should be saved as an image and generate the file
 if GENERATE:
     fig.write_image("DataVisuals/construct_counts.png", width=1200, height=800)
     print("Construct counts graph generated successfully.")
