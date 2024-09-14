@@ -1,8 +1,20 @@
-# Add some data and visualizations to your github profile via github actions!
+# Enhance Your GitHub Profile with Automated Data Insights and Visualizations
 
-## This tool appends some data and data visualizations to your github profile automatically on push via github actions.
+## Automatically showcase detailed analytics of your Python repositories via github actions.
 
-### It appends and updates to your profile at the bottom, so you can keep all your other information the same without worrying about it.
+### This tool automatically generates insightful data visualizations and key statistics for your repositories, updating your GitHub profile on every push. It seamlessly integrates with your existing profile and appends new information at the bottom so your content stays intact. The graphs that are generated are stitched together in a gif so your profile can remain concise and clean.
+
+Analyze, generate and display visuals for your code in relation to:
+- Repositories by commits, line count (of python code)
+- A heatmap of your commit activity by day and time
+- A word cloud of commit messages
+- File type count
+- Libraries used (Python)
+- Construct counts (count of Loops, classes, control flow statements, async functions etc...)
+- Highlights of your most recent closed PRs and commits
+
+Keep your profile engaging with real-time data, without any extra work—everything runs automatically through GitHub Actions.
+
 
 ![](assets/profilegif.gif)
 
