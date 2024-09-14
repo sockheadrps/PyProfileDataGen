@@ -3,7 +3,9 @@ name: Run Python Scripts For Data Gathering and Generation
 on:
   push:
     branches:
-      - main
+      - test
+  workflow_dispatch:
+
 
 jobs:
   build:
@@ -12,8 +14,27 @@ jobs:
       GITHUB_USER_NAME: ${{ secrets.GITHUB_USER_NAME }}
 
     steps:
+
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+      
+      - name: Checkout PythonDataGen repository
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          git clone https://github.com/sockheadrps/PyProfileDataGen.git
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+
+      
+      - name: Move files from PythonDataGen to current repository
+        run: |
+          rm -rf ./Generator
+          mv -f PyProfileDataGen/Generator ./
+          mv -f PyProfileDataGen/LICENSE ./
+          mv -f PyProfileDataGen/config.ini ./
+          mv -f PyProfileDataGen/local_run.bat ./
+          mv -f PyProfileDataGen/requirements.txt ./
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -55,6 +76,10 @@ jobs:
           TOKEN: ${{ secrets.TOKEN }}
         run: python Generator/readme.py
 
+      - name: Remove PythonDataGen
+        run: |
+          rm -rf PyProfileDataGen 
+
       - name: Commit files
         run: |
           git config --local user.email "action@github.com"
@@ -66,4 +91,4 @@ jobs:
         uses: ad-m/github-push-action@v0.6.0
         with:
           github_token: ${{ secrets.TOKEN }}
-          branch: main
+          branch: test
