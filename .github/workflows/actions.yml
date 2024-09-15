@@ -10,6 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -62,7 +63,7 @@ jobs:
           python Generator/utils/graphing/construct_counts_graph.py
           python Generator/utils/graphing/line_prs_graph.py
           python Generator/utils/graphing/lines_graph.py
-          python Generator/utils/graphing/top_libraries_graph.py
+          python Generator/utils/graphing/top_libraries_graph.pya
           python Generator/utils/graphing/commit_heatmap.py
           python Generator/utils/graphing/word_cloud.py
 
