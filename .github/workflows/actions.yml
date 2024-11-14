@@ -44,9 +44,6 @@ jobs:
       - name: Ensure DataVisuals directory exists
         run: mkdir -p DataVisuals
 
-      - name: Run 
-        run: python update_config.py
-        
       - name: Update_config.py and Run data_scrape.py
         env:
           TOKEN: ${{ secrets.TOKEN }}
