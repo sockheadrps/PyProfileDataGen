@@ -3,18 +3,15 @@ name: Run Python Scripts For Data Gathering and Generation
 on:
   push:
     branches:
-      - test
+      - main
   workflow_dispatch:
 
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_USER_NAME: ${{ secrets.GITHUB_USER_NAME }}
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
       
@@ -47,7 +44,10 @@ jobs:
       - name: Ensure DataVisuals directory exists
         run: mkdir -p DataVisuals
 
-      - name: Run data_scrape.py
+      - name: Run 
+        run: python update_config.py
+        
+      - name: Update_config.py and Run data_scrape.py
         env:
           TOKEN: ${{ secrets.TOKEN }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -84,4 +84,4 @@ jobs:
         uses: ad-m/github-push-action@v0.6.0
         with:
           github_token: ${{ secrets.TOKEN }}
-          branch: test
+          branch: main
