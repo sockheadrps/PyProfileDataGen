@@ -125,3 +125,37 @@ This will always take a few minutes if you have a lot of repos.
 ### Once this build finished your Profile will be updated and ready!
 
 </details>
+
+<details>
+<summary>Starter Template</summary>
+<br>
+
+```
+<!-- Badges https://github.com/inttter/md-badges -->
+![Python](https://img.shields.io/badge/python-3670A0?style=plastic&logo=python&logoColor=ffdd54) 
+
+<br>
+
+<!-- Projects -->
+
+### ***[NAME](LINK)***
+![GitHub commit activity](https://img.shields.io/github/commit-activity/t/USERNAME/REPO)  
+***BRIEF DESCRIPTION***
+
+<br>
+<br>
+
+<!-- Github Stats -->
+
+![](https://github-readme-stats.vercel.app/api?username=USERNAME&theme=radical&hide_border=false&include_all_commits=true&count_private=false)<br/>
+![](https://github-readme-stats.vercel.app/api/top-langs/?username=USERNAME&theme=radical&hide_border=false&include_all_commits=true&count_private=true&layout=compact)
+
+## 🏆 GitHub Trophies
+
+![](https://github-profile-trophy.vercel.app/?username=USERNAME&theme=radical&no-frame=false&no-bg=true&margin-w=4)
+
+---
+
+```
+
+</details>

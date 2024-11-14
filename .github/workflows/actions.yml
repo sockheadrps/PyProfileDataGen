@@ -28,7 +28,6 @@ jobs:
         run: |
           rm -rf ./Generator
           mv -f PyProfileDataGen/Generator ./
-          mv -f PyProfileDataGen/LICENSE ./
           mv -f PyProfileDataGen/requirements.txt ./
 
       - name: Set up Python
@@ -44,7 +43,7 @@ jobs:
       - name: Ensure DataVisuals directory exists
         run: mkdir -p DataVisuals
 
-      - name: Update_config.py and Run data_scrape.py
+      - name: Run data_scrape.py
         env:
           TOKEN: ${{ secrets.TOKEN }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -74,6 +73,7 @@ jobs:
       - name: Remove PythonDataGen
         run: |
           rm -rf PyProfileDataGen 
+          rm -rf requirements.txt
 
       - name: Commit files
         run: |
