@@ -45,8 +45,6 @@ Keep your profile engaging with real-time data, without any extra work—everyth
 TOKEN=YOUR_API_TOKEN
 ```
 
-<!-- Add any other content related to this section here -->
-
 </details>
 
 <details>
@@ -68,15 +66,15 @@ TOKEN=YOUR_API_TOKEN
 
 <details>
 
-<summary>Clone this repo or save it from github and prepare your profile repo</summary>
+<summary>Copy and save the config to your profile repo</summary>
 
-### Clone or save
+### Copy the config from the [PyProfileDataGen repo](https://github.com/sockheadrps/PyProfileDataGen/blob/main/config.ini) to your profile repo.
 
-![](assets/clonesave.png)
+![](assets/copyconfig.png)
 
-### Open the folder you just saved this repo to, as well as the folder containing your profile repo. Move the highlighted files
+### Paste this config into your profile repo as config.ini Edit the username value with your own, and any other configs you might want to change
 
-![](assets/movefiles.png)
+![](assets/pasteconfig.png)
 
 ### open your profile README.md and add
 
@@ -90,94 +88,25 @@ Make sure --- doesnt appear anywhere else in your markdown. This is how the pyth
 
 ![](assets/readmeadd.png)
 
-### Open config.ini and edit the username value with your own, and any other configs you might want to change
-
-![](assets/config.png)
-
 </details>
 
 <details>
 
-<summary>(Optional) Test the data gen locally</summary>
+<summary>Copy github workflow action into your profile repo</summary>
+<br>
 
-go to your github profile page repo in your terminal and run:
+go to your github profile, add the directory .github/workflows and add a file, actions.yml. Paste the contents of [this action file](https://github.com/sockheadrps/PyProfileDataGen/blob/main/.github/workflows/actions.yml) into it.
 
-```
-python Generator\utils\data_scrape.py
-```
-
-This may take a few minutes depending on how many repos youve uploaded
-![](assets/datascrape.png)
-
-### Run the bat file
-
-```
-local_run.bat
-```
-
-### Or manually Run the following commands.
-
-mergedprs.py must be run first
-
-```
-python Generator\utils\mergedprs.py
-```
-
-these can be run in any order
-
-```
-python Generator\utils\graphing\construct_counts_graph.py
-```
-
-```
-python Generator\utils\graphing\line_prs_graph.py
-```
-
-```
-python Generator\utils\graphing\lines_graph.py
-```
-
-```
-python Generator\utils\graphing\top_libraries_graph.py
-```
-
-```
-python Generator/utils/graphing/word_cloud.py
-```
-
-```
-Generator/utils/graphing/commit_heatmap.py
-```
-
-```
-python Generator\utils\graphing\file_types_bar_graph.py
-```
-
-then run
-
-```
-python Generator\utils\gifmaker.py
-```
-
-and finally run
-
-```
-python Generator\readme.py
-```
-
-![](assets/runlocal.png)
-
-### Now look at the data appended in your README.md
+![](assets/actionsfile.png)
+![](assets/actionspaste.png)
 
 </details>
 
 <details>
 <summary>Push to your profile repo</summary>
 <br>
-This pull isnt necessary on the initial commit of this, but after this first commit github Actions will be updating your readme automatically, meaning the readme.md will have changes that our local repo doesnt have. To resolve this any time we want to re-run our data generation, we should pull.
 
 ```
-git pull
 git add .
 git commit -m "Updating profile"
 git push

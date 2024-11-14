@@ -117,6 +117,7 @@ for i, repo in enumerate(repo_iter):
         recent_commits = []
         for commit in commits:
             commit_date = commit.commit.author.date
+            commit_date = commit_date.replace(tzinfo=timezone.utc).astimezone(target_tz)
             commit_times.append([commit_date.weekday(), commit_date.hour])
             commit_messages[repo.name].append(commit.commit.message)
             total_commits += 1

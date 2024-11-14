@@ -32,8 +32,6 @@ jobs:
           rm -rf ./Generator
           mv -f PyProfileDataGen/Generator ./
           mv -f PyProfileDataGen/LICENSE ./
-          mv -f PyProfileDataGen/config.ini ./
-          mv -f PyProfileDataGen/local_run.bat ./
           mv -f PyProfileDataGen/requirements.txt ./
 
       - name: Set up Python
@@ -70,11 +68,6 @@ jobs:
       - name: Generate data gif
         run: |
           python Generator/utils/gifmaker.py
-
-      - name: Adjust Readme
-        env:
-          TOKEN: ${{ secrets.TOKEN }}
-        run: python Generator/readme.py
 
       - name: Remove PythonDataGen
         run: |
