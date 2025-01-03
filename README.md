@@ -159,3 +159,21 @@ This will always take a few minutes if you have a lot of repos.
 ```
 
 </details>
+
+<details>
+
+<summary>(Optional) Enable remote triggering of your github workflow action</summary>
+<br>
+
+If you want to trigger automated updates instead of manual updates to your Profile.  Go to your github repo where you would like to add auto triggering, add the directory .github/workflows and add a file, trigger.yml. Paste the contents of [this trigger file](https://github.com/sockheadrps/PyProfileDataGen/blob/main/.github/trigger.yml) into it and make a few simple changes listed below.
+
+- Ensure that the ```secrets.TOKEN``` you previously created is added to the repo
+    - Refer to [Saving Github API token for the github action](#go-to-your-profile-repo-and-click-on-settings)
+- Change ```{owner}``` and ```{repo}``` to that of your profile ```actions.yml``` file
+    - Example: ```https://api.github.com/repos/sockheadrps/sockheadrps/actions/workflows/actions.yml/dispatches```
+- Change ```{current_repo}``` or the complete message
+    - Example: ```"Triggered by One Awesome Repo"```
+
+![](assets/triggerfile.png)
+
+</details>

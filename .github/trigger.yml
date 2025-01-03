@@ -1,0 +1,28 @@
+name: Automatically update Profile README.md file
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  actions: write
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Trigger to Profile Repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        run: |
+          curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/{owner}/{repo}/actions/workflows/actions.yml/dispatches \
+          -d '{
+              "ref": "main",
+              "inputs": {
+                  "commit_message": "Triggered by {current_repo} Repo"
+              }
+          }'

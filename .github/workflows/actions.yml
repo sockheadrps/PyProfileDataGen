@@ -5,7 +5,14 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      commit_message:
+        description: "Message from a triggered repository"
+        required: true
+        default: "No input provided"
 
+permissions:
+  contents: write
 
 jobs:
   build:
