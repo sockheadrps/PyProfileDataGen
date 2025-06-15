@@ -1,4 +1,5 @@
 from github import Github
+from github.GithubException import GithubException
 from dotenv import load_dotenv
 import os
 import json
@@ -115,29 +116,35 @@ for i, repo in enumerate(repo_iter):
         commits = repo.get_commits()
         total_commits = 0
         recent_commits = []
-        for commit in commits:
-            commit_date = commit.commit.author.date
-            commit_date = commit_date.replace(tzinfo=timezone.utc).astimezone(target_tz)
-            commit_times.append([commit_date.weekday(), commit_date.hour])
-            commit_messages[repo.name].append(commit.commit.message)
-            total_commits += 1
+        try:
+            for commit in commits:
+                commit_date = commit.commit.author.date
+                commit_date = commit_date.replace(tzinfo=timezone.utc).astimezone(target_tz)
+                commit_times.append([commit_date.weekday(), commit_date.hour])
+                commit_messages[repo.name].append(commit.commit.message)
+                total_commits += 1
 
-            if is_recent_commit(commit_date):
-                commit_details = {
-                    "repo_name": repo.name,
-                    "repo_url": f"https://github.com/{user.login}/{repo.name}",
-                    "sha": commit.sha,
-                    "message": commit.commit.message,
-                    "author": commit.commit.author.name,
-                    "date": commit_date.isoformat()
-                }
+                if is_recent_commit(commit_date):
+                    commit_details = {
+                        "repo_name": repo.name,
+                        "repo_url": f"https://github.com/{user.login}/{repo.name}",
+                        "sha": commit.sha,
+                        "message": commit.commit.message,
+                        "author": commit.commit.author.name,
+                        "date": commit_date.isoformat()
+                    }
 
-                commit_data = repo.get_commit(commit.sha)
-                commit_details["additions"] = commit_data.stats.additions
-                commit_details["deletions"] = commit_data.stats.deletions
-                commit_details["total_changes"] = commit_data.stats.total
+                    commit_data = repo.get_commit(commit.sha)
+                    commit_details["additions"] = commit_data.stats.additions
+                    commit_details["deletions"] = commit_data.stats.deletions
+                    commit_details["total_changes"] = commit_data.stats.total
 
-                recent_commits.append(commit_details)
+                    recent_commits.append(commit_details)
+        except GithubException as e:
+            if e.status == 409 and "Git Repository is empty" in str(e):
+                print(f"Skipping empty repository: {repo.name}")
+            else:
+                raise
 
         repo_info = {
             "repo_name": repo.name,
