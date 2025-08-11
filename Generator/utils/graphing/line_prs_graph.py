@@ -1,12 +1,13 @@
 import json
 import plotly.express as px
 import pandas as pd
-import configparser
-
-config = configparser.ConfigParser()
-config.read("config.ini")
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from config_helper import config
 
 GENERATE = config.getboolean("Settings", "generate_lines_of_code_pr_scatter_chart")
+
 
 with open("repo_data.json", "r") as json_file:
     repo_data = json.load(json_file)

@@ -1,11 +1,11 @@
 import json
 import plotly.graph_objects as go
 import pandas as pd
-import configparser
 from collections import defaultdict
-
-config = configparser.ConfigParser()
-config.read("config.ini")
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from config_helper import config
 
 GENERATE = config.getboolean("Settings", "generate_construct_bar_chart")
 

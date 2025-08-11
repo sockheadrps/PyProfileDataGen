@@ -8,12 +8,17 @@ import configparser
 from datetime import datetime, timedelta, timezone
 from pytz import timezone as tz
 import time
+import base64, binascii
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))
+from config_helper import config
+
 
 
 # ===== Env & Config =====
 load_dotenv()
-config = configparser.ConfigParser()
-config.read("config.ini")
+
 
 DEBUG = config.getboolean("Debug", "debug", fallback=False)
 STEP_COUNT = config.getint("Debug", "step_count", fallback=10)
@@ -56,11 +61,19 @@ def wait_for_rate_limit(github_client):
         time.sleep(sleep_sec)
 
 def preflight(github_client, floor=5):
-    """Ensure we have a small headroom before entering a heavy loop."""
-    remaining, _limit = github_client.rate_limining if hasattr(github_client, "rate_limining") else github_client.rate_limiting
+    remaining, _limit = github_client.rate_limiting
     if remaining < floor:
         print("⏰ Low remaining calls, waiting for reset…")
         wait_for_rate_limit(github_client)
+
+def norm(path: str) -> str:
+    return path.replace("\\", "/")
+
+def path_is_excluded(path: str) -> bool:
+    p = norm(path)
+    # Exclude if any first path segment matches an excluded dir
+    parts = p.split("/")
+    return any(part in EXCLUDE_DIRS for part in parts[:-1])  # ignore filename
 
 def safe_github_call(fn, *args, **kwargs):
     while True:
@@ -73,6 +86,77 @@ def safe_github_call(fn, *args, **kwargs):
                 wait_for_rate_limit(g)
                 continue
             raise
+
+
+
+MAX_BYTES = 1_000_000  # skip monsters; tweak as you like
+
+def decode_utf8_lossy(b: bytes) -> str:
+    try:
+        return b.decode("utf-8", errors="strict")
+    except UnicodeDecodeError:
+        return b.decode("utf-8", errors="replace")
+
+def list_repo_py_files_via_tree(repo):
+    """Return list[(path, sha, size)] for .py files, with excludes and no duplicates."""
+    preflight(g)
+    default_branch = repo.default_branch
+    tree = safe_github_call(repo.get_git_tree, default_branch, recursive=True)
+
+    out = []
+    seen = set()
+    for item in tree.tree:
+        if item.type != "blob":
+            continue
+        if not item.path.endswith(".py"):
+            continue
+        if path_is_excluded(item.path):
+            continue
+        if item.path in seen:
+            continue
+        seen.add(item.path)
+        out.append((item.path, item.sha, getattr(item, "size", None)))
+    return out
+
+def list_repo_all_files_via_tree(repo):
+    """Return list[(path, sha, size, extension)] for all files, with excludes and no duplicates."""
+    preflight(g)
+    default_branch = repo.default_branch
+    tree = safe_github_call(repo.get_git_tree, default_branch, recursive=True)
+
+    out = []
+    seen = set()
+    for item in tree.tree:
+        if item.type != "blob":
+            continue
+        if path_is_excluded(item.path):
+            continue
+        if item.path in seen:
+            continue
+        
+        # Get file extension
+        split_path = item.path.rsplit('.', 1)
+        extension = '.' + split_path[-1] if len(split_path) > 1 and split_path[-1] else item.path
+        
+        seen.add(item.path)
+        out.append((item.path, item.sha, getattr(item, "size", None), extension))
+    return out
+
+def fetch_blob_text(repo, sha, size_hint=None):
+    """Fetch blob by sha and return decoded text (or None if skipped)."""
+    if size_hint is not None and size_hint > MAX_BYTES:
+        return None, f"[skipped: {size_hint} bytes]"
+    preflight(g)
+    blob = safe_github_call(repo.get_git_blob, sha)
+    try:
+        raw = base64.b64decode(blob.content, validate=False)
+    except binascii.Error:
+        raw = base64.b64decode(blob.content)
+    # Cheap binary-ish heuristic: too many control chars
+    if raw and (sum(c < 9 or (13 < c < 32) for c in raw[:4096]) > 100):
+        return None, "[skipped: binary-ish]"
+    return decode_utf8_lossy(raw), None
+
 
 def count_lines(content: str) -> int:
     return len(content.splitlines())
@@ -298,97 +382,42 @@ for i, repo in enumerate(repo_iter):
     # OPTIONAL: collect commit messages too (commented to save calls/time)
     # If you want them, uncomment the msg append above when iterating commits.
 
+    # Process all files to collect file extensions and Python files for analysis
     try:
-        preflight(g)
-        contents = list(safe_github_call(repo.get_contents, ""))
-        processed_files = set()  # Track processed files to avoid duplicates
+        all_files = list_repo_all_files_via_tree(repo)
         
-        while contents:
-            file_content = contents.pop(0)
-            
-            # Skip if we've already processed this file
-            if file_content.path in processed_files:
+        # First pass: collect all file extensions and count them
+        for path, sha, size, extension in all_files:
+            repo_info["file_extensions"][extension] = repo_info["file_extensions"].get(extension, 0) + 1
+        
+        # Second pass: process Python files for detailed analysis
+        py_files = [f for f in all_files if f[3] == '.py']  # Filter Python files by extension
+        
+        for path, sha, size, extension in py_files:
+            text, skip_reason = fetch_blob_text(repo, sha, size)
+            if text is None:
+                print(f"  ⚠️ {path} {skip_reason}")
                 continue
-                
-            if file_content.type == "dir":
-                # Skip excluded directories and hidden directories
-                if (file_content.path.startswith('.') or 
-                    any(excluded in file_content.path for excluded in EXCLUDE_DIRS)):
-                    continue
-                    
-                try:
-                    preflight(g)
-                    new_contents = safe_github_call(repo.get_contents, file_content.path)
-                    # Only add files we haven't seen
-                    for new_file in new_contents:
-                        if new_file.path not in processed_files:
-                            contents.append(new_file)
-                except GithubException as e:
-                    if e.status == 404:
-                        print(f"⚠️ Directory not found: {file_content.path}")
-                        continue
-                    else:
-                        print(f"⚠️ Skipping directory on error: {file_content.path} ({e})")
-                        continue
-            else:
-                # Mark this file as processed
-                processed_files.add(file_content.path)
-                
-                split_path = file_content.path.rsplit('.', 1)
-                file_extension = '.' + split_path[-1] if len(split_path) > 1 else file_content.path
-                repo_info["file_extensions"][file_extension] = repo_info["file_extensions"].get(file_extension, 0) + 1
 
-                if file_extension == ".py":
-                    repo_info["total_python_files"] += 1
-                    try:
-                        raw = getattr(file_content, "decoded_content", None)
-                        if raw is None:
-                            preflight(g)
-                            refetched = safe_github_call(repo.get_contents, file_content.path)
-                            raw = getattr(refetched, "decoded_content", None)
-                        if raw is None:
-                            print(f"⚠️ Could not read {file_content.path}, skipping")
-                            continue
+            repo_info["python_files"].append(path)
+            line_count = count_lines(text)
+            repo_info["total_python_files"] += 1
+            repo_info["total_python_lines"] += line_count
 
-                        # Check if this is actually a text file
-                        if raw and len(raw) > 0:
-                            try:
-                                text = raw.decode("utf-8", errors="strict")
-                                
-                                # Only count if it's actually Python code (not just a .py file)
-                                if text.strip() and not text.startswith(b'\x00'.decode()):  # Check for binary
-                                    repo_info["python_files"].append(file_content.path)
-                                    line_count = count_lines(text)
-                                    repo_info["total_python_lines"] += line_count
-                                    print(f"  📄 {file_content.path}: {line_count} lines")
-                                    
-                                    # Also show running total for this repo
-                                    print(f"    Running total: {repo_info['total_python_lines']} lines in {repo_info['total_python_files']} files")
-                                    
-                                    libs, construct_counts = count_python_constructs(text)
-                                    repo_info["libraries"].update(libs)
-                                    for k, v in construct_counts.items():
-                                        repo_info["construct_counts"][k] += v
-                                else:
-                                    print(f"  ⚠️ Skipping binary/empty file: {file_content.path}")
-                                    
-                            except UnicodeDecodeError:
-                                print(f"  ⚠️ Skipping non-UTF-8 file: {file_content.path}")
-                        else:
-                            print(f"  ⚠️ Skipping empty file: {file_content.path}")
-                            
-                    except GithubException as e:
-                        msg = str(e).lower()
-                        if e.status == 403 and "rate limit" in msg:
-                            print(f"⏰ Rate limit while reading {file_content.path}. Waiting…")
-                            wait_for_rate_limit(g)
-                            # Don't retry - just skip to avoid double counting
-                            continue
-                        else:
-                            print(f"⚠️ Error reading file {file_content.path}: {e}")
-                            continue
+            if DEBUG:
+                print(f"  📄 {path}: {line_count} lines (running total: {repo_info['total_python_lines']})")
+
+            libs, construct_counts = count_python_constructs(text)
+            repo_info["libraries"].update(libs)
+            for k, v in construct_counts.items():
+                repo_info["construct_counts"][k] += v
+                
+        if DEBUG:
+            print(f"  📁 Total files found: {len(all_files)}")
+            print(f"  📊 File extensions: {dict(repo_info['file_extensions'])}")
+            
     except GithubException as e:
-        print(f"❌ Error processing repository {repo.name}: {e}")
+        print(f"❌ Error processing repository {repo.name} with Trees API: {e}")
         continue
 
     repo_info["libraries"] = list(repo_info["libraries"])
@@ -418,7 +447,8 @@ for i, repo in enumerate(repo_iter):
     print(f"     Total lines: {repo_info['total_python_lines']}")
     if repo_info['total_python_files'] > 0:
         print(f"     Average lines per file: {repo_info['total_python_lines'] / repo_info['total_python_files']:.1f}")
-    print(f"     Files processed:")
+    print(f"     All file types: {dict(repo_info['file_extensions'])}")
+    print(f"     Python files processed:")
     for py_file in repo_info['python_files']:
         print(f"       - {py_file}")
     print()
@@ -428,8 +458,16 @@ print("✅ Done. Final data saved to repo_data.json")
 # Print final summary
 total_python_files = sum(repo.get("total_python_files", 0) for repo in repo_data["repo_stats"])
 total_python_lines = sum(repo.get("total_python_lines", 0) for repo in repo_data["repo_stats"])
+
+# Aggregate all file extensions across repositories
+all_file_extensions = defaultdict(int)
+for repo in repo_data["repo_stats"]:
+    for ext, count in repo.get("file_extensions", {}).items():
+        all_file_extensions[ext] += count
+
 print(f"\n📊 FINAL SUMMARY:")
 print(f"   Total repositories: {len(repo_data['repo_stats'])}")
 print(f"   Total Python files: {total_python_files}")
 print(f"   Total Python lines: {total_python_lines}")
 print(f"   Average lines per file: {total_python_lines / total_python_files if total_python_files > 0 else 0:.1f}")
+print(f"   All file types found: {dict(all_file_extensions)}")

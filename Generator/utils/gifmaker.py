@@ -2,10 +2,8 @@ import os
 import imageio
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
-import configparser
+from config_helper import config
 
-config = configparser.ConfigParser()
-config.read("config.ini")
 GIF_FRAME_DURATION = int(config.get("Settings", "gif_frame_duration", fallback="5000"))
 
 directory = "DataVisuals"

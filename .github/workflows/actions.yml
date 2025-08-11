@@ -1,96 +1,27 @@
-name: Run Python Scripts For Data Gathering and Generation
+name: Notify Profile Repo
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
-    inputs:
-      commit_message:
-        description: "Message from a triggered repository"
-        required: true
-        default: "No input provided"
 
 permissions:
-  contents: write
+  actions: write
+  contents: read
 
 jobs:
-  build:
+  notify:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Checkout PythonDataGen repository
-        run: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
-          git clone https://github.com/sockheadrps/PyProfileDataGen.git
+      - name: Trigger profile repo workflow
         env:
-          TOKEN: ${{ secrets.TOKEN }}
-
-      
-      - name: Move files from PythonDataGen to current repository
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_OWNER: ${{ github.repository_owner }}
+          TARGET_REPO: ${{ github.repository_owner }}   # profile repo is usually owner/owner
+          TARGET_WORKFLOW: update-profile.yml           # <-- must match the file name in target repo
         run: |
-          rm -rf ./Generator
-          mv -f PyProfileDataGen/Generator ./
-          mv -f PyProfileDataGen/requirements.txt ./
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      
-      - name: Ensure DataVisuals directory exists
-        run: mkdir -p DataVisuals
-
-      - name: Run data_scrape.py
-        env:
-          TOKEN: ${{ secrets.TOKEN }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-        run: python Generator/utils/data_scrape.py
-
-      - name: Gather Merged PRs
-        run: python Generator/utils/mergedprs.py
-
-      - name: Generate Graphs
-        run: |
-          python Generator/utils/graphing/construct_counts_graph.py
-          python Generator/utils/graphing/line_prs_graph.py
-          python Generator/utils/graphing/lines_graph.py
-          python Generator/utils/graphing/top_libraries_graph.py
-          python Generator/utils/graphing/commit_heatmap.py
-          python Generator/utils/graphing/word_cloud.py
-
-      - name: Generate data gif
-        run: |
-          python Generator/utils/gifmaker.py
-
-      - name: Adjust Readme
-        env:
-          TOKEN: ${{ secrets.TOKEN }}
-        run: python Generator/readme.py
-
-      - name: Remove PythonDataGen
-        run: |
-          rm -rf PyProfileDataGen 
-          rm -rf requirements.txt
-
-      - name: Commit files
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add -A
-          git diff-index --quiet HEAD || git commit -m "Updated Python data" --allow-empty
-
-      - name: Push changes
-        uses: ad-m/github-push-action@v0.6.0
-        with:
-          github_token: ${{ secrets.TOKEN }}
-          branch: main
+          curl -sS -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${TARGET_OWNER}/${TARGET_REPO}/actions/workflows/${TARGET_WORKFLOW}/dispatches \
+            -d "{\"ref\":\"main\",\"inputs\":{\"commit_message\":\"Triggered by ${GITHUB_REPOSITORY}\"}}"

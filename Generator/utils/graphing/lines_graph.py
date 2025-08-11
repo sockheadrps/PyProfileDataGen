@@ -1,11 +1,10 @@
 import json
 import plotly.express as px
 import pandas as pd
-import configparser
-
-
-config = configparser.ConfigParser()
-config.read("config.ini")
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from config_helper import config
 
 GENERATE = config.getboolean("Settings", "generate_lines_of_code_line_chart")
 
@@ -58,11 +57,11 @@ fig.update_layout(
         zeroline=False,
         visible=True,
         showline=True,
-        range=[0, df["Lines of Python Code"].max() + 100],
+        range=[0, df["Lines of Python Code"].max() + 500],  # Increased to accommodate text labels
     ),
     plot_bgcolor="#22272E",
     paper_bgcolor="#22272E",
-    margin=dict(l=40, r=40, t=60, b=0),
+    margin=dict(l=40, r=40, t=100, b=0),  # Increased top margin for text labels
 )
 
 

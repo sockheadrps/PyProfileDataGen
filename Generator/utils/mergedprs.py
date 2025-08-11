@@ -2,9 +2,7 @@ import requests
 import json
 import configparser
 
-
-config = configparser.ConfigParser()
-config.read("config.ini")
+from config_helper import config
 
 USERNAME = config.get("Settings", "github_user_name")
 

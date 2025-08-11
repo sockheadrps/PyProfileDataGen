@@ -3,11 +3,8 @@ from collections import Counter
 from datetime import datetime
 from dotenv import load_dotenv
 import os
-import configparser
+from utils.config_helper import config
 
-
-config = configparser.ConfigParser()
-config.read("config.ini")
 
 SHOW_RECENT_COMMITS = config.getboolean("Readme", "show_recent_commits")
 GENERATE_MERGED_PRS = config.getboolean("Readme", "generate_merged_prs")
@@ -24,8 +21,6 @@ def load_environment():
     TODAY = os.getenv("TODAY")
     GITHUB_RUN_ID = os.getenv("GITHUB_RUN_ID")
 
-    config = configparser.ConfigParser()
-    config.read("config.ini")
     excluded_libraries_str = config.get(
         "ExcludedLibs", "excluded_libraries", fallback="")
     excluded_libraries = eval(excluded_libraries_str)
