@@ -76,10 +76,14 @@ def format_recent_commits(commits):
 def format_pr_info(prs):
     formatted_info = []
     for pr in prs:
+        # Format the date nicely
+        closed_date = datetime.fromisoformat(pr["closed_at"].replace("Z", "+00:00"))
+        formatted_date = closed_date.strftime("%B %Y")
+        
         pr_info = (
             f'- **[{pr["title"]}]({pr["url"]})**\n'
-            f'  - Repository: [{pr["repository"]}]({pr["repo_url"]})\n'
-            f'  - Stars: {pr["stars"]}\n'
+            f'  - Repository: [{pr["full_repo_name"]}]({pr["repo_url"]})\n'
+            f'  - Stars: **{pr["stars"]}** | Merged: {formatted_date}\n'
         )
         formatted_info.append(pr_info)
     return "\n".join(formatted_info)
@@ -101,9 +105,16 @@ def update_readme():
         recent_commits_section = ""
 
     if GENERATE_MERGED_PRS:
-        recent_prs_section = f"## 🔀 Recently Merged Pull Requests\n\n{format_pr_info(repo_data['merged_prs'][:3])}\n"
+        # Sort PRs by stars for popular section
+        sorted_by_stars = sorted(repo_data['merged_prs'], key=lambda x: x["stars"], reverse=True)
+        # Sort PRs by date for recent section
+        sorted_by_date = sorted(repo_data['merged_prs'], key=lambda x: x["closed_at"], reverse=True)
+        
+        popular_prs_section = f"## 🔀 Popular Pull Requests\n\n{format_pr_info(sorted_by_stars[:1])}\n\n"
+        recent_prs_section = f"## 🔀 Recent Pull Requests\n\n{format_pr_info(sorted_by_date[:3])}\n"
+        merged_prs_section = popular_prs_section + recent_prs_section
     else:
-        recent_prs_section = ""
+        merged_prs_section = ""
 
     if SHOW_TOTAL_LINES_OF_CODE:
         total_lines_of_code = f"### Total Lines of Python Code: {total_lines_of_code}\n"
@@ -121,7 +132,7 @@ def update_readme():
         f"\n\n",
         f"### Data last generated on: {timestamp} via [GitHub Action {GITHUB_RUN_ID}](https://github.com/sockheadrps/sockheadrps/actions/runs/{GITHUB_RUN_ID})\n\n"
         f"{recent_commits_section}",
-        f"{recent_prs_section}",
+        f"{merged_prs_section}",
         f"# 📊 Python Stats:\n\n",
         f"{total_lines_of_code}",
         f"{total_libraries_used}",

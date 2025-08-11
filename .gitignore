@@ -1,3 +1,5 @@
 .env
 repo_data.json
 .venv/
+*/__pycache__/
+**/__pycache__/
