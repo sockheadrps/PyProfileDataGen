@@ -1,2 +1,3 @@
 .env
 repo_data.json
+.venv/
